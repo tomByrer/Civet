@@ -972,28 +972,20 @@ FunctionExpression
     }
 
   # Ruby/Crystal style block shorthand
-  Ampersand !_ CallExpressionRest+ ->
-    $1.token = "$ => $"
-    return {
-      type: "ArrowFunction",
-      children: [$1, $3],
+  [!~+-]*:pre Ampersand:amp ![& ] CallExpressionRest*:calls BinaryOpRHS*:ops ->
+    if (!calls.length && !ops.length && !pre.length) return $skip
+    let exp = "$"
+    if (calls.length) {
+      exp = [exp, calls]
+    }
+    if (ops.length) {
+      exp = module.processBinaryOpExpression([exp, ops])
     }
 
-  # Binary ops
-  Ampersand ![&] BinaryOpRHS+ ->
-    $1.token = "$ => $"
-    const exp = module.processBinaryOpExpression([$1, $3])
-
+    amp.token = "$ => "
     return {
       type: "ArrowFunction",
-      children: exp,
-    }
-
-  # Unary ops
-  [!~+-]+ Ampersand ->
-    return {
-      type: "ArrowFunction",
-      children: ["$ => ", $1, "$"],
+      children: [amp, pre, exp],
     }
 
 ThinArrowFunction
